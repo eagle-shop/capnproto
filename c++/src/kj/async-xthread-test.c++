@@ -1040,5 +1040,39 @@ KJ_TEST("cross-thread fulfiller multiple fulfills") {
   kj::Thread thread4(func);
 }
 
+KJ_TEST("This test hangs") {
+  constexpr size_t COUNT = 1000;
+  for (size_t i = 0; i < COUNT; ++i) {
+    MutexGuarded<kj::Maybe<bool>> setup;
+    Own<const Executor> exec;
+
+    Thread thread([&]() noexcept {
+      KJ_XTHREAD_TEST_SETUP_LOOP;
+      exec = getCurrentThreadExecutor().addRef();
+      delay();
+      *setup.lockExclusive() = true;
+    });
+
+    ([&]() noexcept {
+      auto lock = setup.lockExclusive();
+      lock.wait([&](kj::Maybe<bool> value) { return value.orDefault(false); });
+
+      bool ret = false;
+      if (exec->isLive()) {
+        try {
+          ret = exec->executeSync([]() {
+            return true;
+          });
+          KJ_EXPECT(ret == true);
+        } catch (const kj::Exception&) {
+          KJ_EXPECT(ret == false);
+        }
+      } else {
+        KJ_EXPECT(ret == false);
+      }
+    })();
+  }
+}
+
 }  // namespace
 }  // namespace kj
