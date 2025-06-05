@@ -433,7 +433,7 @@ else
   # GCC emits uninitialized warnings all over and they seem bogus. We use valgrind to test for
   # uninitialized memory usage later on. GCC 4 also emits strange bogus warnings with
   # -Wstrict-overflow, so we disable it.
-  CXXFLAGS="$CXXFLAGS -Wno-maybe-uninitialized -Wno-strict-overflow"
+  CXXFLAGS="$CXXFLAGS -Wno-maybe-uninitialized -Wno-strict-overflow -Wno-misleading-indentation"
 
   # TODO(someday): Enable coroutines in g++ if supported.
 fi
