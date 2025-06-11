@@ -75,7 +75,16 @@ inline constexpr bool _kj_internal_isPolymorphic(T*) {
 //     template <typename X, typename Y>
 //     KJ_DECLARE_NON_POLYMORPHIC(MyType<X, Y>)
 
+class Refcounted;
+
 namespace _ {  // private
+
+template <typename T>
+concept IsRefcounted = requires(const T* t) {
+  { static_cast<const Refcounted*>(t) };
+};
+// TODO(someday): This seems good enough to catch obvious problems, and avoids pulling in
+// additional dependencies; not sure if std::derived_from or std::is_base_of_v would be better?
 
 template <typename T> struct RefOrVoid_ { typedef T& Type; };
 template <> struct RefOrVoid_<void> { typedef void Type; };
@@ -273,7 +282,10 @@ public:
     return *this;
   }
 
-  template <typename... Attachments>
+  template <typename... Attachments> requires (!::kj::_::IsRefcounted<T>)
+  Own<T> attach(Attachments&&... attachments) KJ_WARN_UNUSED_RESULT;
+
+  template <typename... Attachments> requires (::kj::_::IsRefcounted<T>)
   Own<T> attach(Attachments&&... attachments) KJ_WARN_UNUSED_RESULT;
   // Returns an Own<T> which points to the same object but which also ensures that all values
   // passed to `attachments` remain alive until after this object is destroyed. Normally
@@ -342,6 +354,9 @@ private:
         "Casting owned pointers requires that the target type is polymorphic.");
     return ptr;
   }
+
+  template <typename... Attachments>
+  Own<T> attachImpl(Attachments&&... attachments) KJ_WARN_UNUSED_RESULT;
 
   template <typename, typename>
   friend class Own;
@@ -956,8 +971,26 @@ const StaticDisposerAdapter<T, D> StaticDisposerAdapter<T, D>::instance =
 }  // namespace _ (private)
 
 template <typename T>
-template <typename... Attachments>
+template <typename... Attachments> requires (!::kj::_::IsRefcounted<T>)
 Own<T> Own<T>::attach(Attachments&&... attachments) {
+  return attachImpl(kj::fwd<Attachments>(attachments)...);
+}
+
+template <typename T>
+template <typename... Attachments> requires (::kj::_::IsRefcounted<T>)
+[[deprecated("using attach() with kj::Refcounted is not recommended")]]
+Own<T> Own<T>::attach(Attachments&&... attachments) {
+  return attachImpl(kj::fwd<Attachments>(attachments)...);
+}
+
+template <typename T>
+template <typename... Attachments>
+Own<T> Own<T>::attachImpl(Attachments&&... attachments) {
+  // TODO(someday): enable static_assert, factor away attachImpl():
+  //static_assert(!::kj::_::IsRefcounted<T>, "cannot use attach() with kj::Refcounted");
+  // attach() only keeps values alive for the life of one kj::Own<T>; a kj::Refcounted value can
+  // have multiple kj::Own<T>s.
+
   T* ptrCopy = ptr;
 
   KJ_IREQUIRE(ptrCopy != nullptr, "cannot attach to null pointer");
@@ -974,12 +1007,14 @@ Own<T> Own<T>::attach(Attachments&&... attachments) {
 
 template <typename T, typename... Attachments>
 Own<T> attachRef(T& value, Attachments&&... attachments) {
+  // TODO(someday): maybe also assert against T deriving from kj::Refcounted here?
   auto bundle = new _::DisposableOwnedBundle<Attachments...>(kj::fwd<Attachments>(attachments)...);
   return Own<T>(&value, *bundle);
 }
 
 template <typename T, typename... Attachments>
 Own<Decay<T>> attachVal(T&& value, Attachments&&... attachments) {
+  // TODO(someday): maybe also assert against T deriving from kj::Refcounted here?
   auto bundle = new _::DisposableOwnedBundle<T, Attachments...>(
       kj::fwd<T>(value), kj::fwd<Attachments>(attachments)...);
   return Own<Decay<T>>(&bundle->first, *bundle);
