@@ -78,7 +78,9 @@ set(kj-std_headers
 )
 add_library(kj ${kj_sources})
 add_library(CapnProto::kj ALIAS kj)
-target_compile_features(kj PUBLIC cxx_std_17)
+if (NOT CMAKE_OSX_SYSROOT STREQUAL "iphonesimulator")
+  target_compile_features(kj PUBLIC cxx_std_17)
+endif()
 
 if(UNIX AND NOT ANDROID)
   target_link_libraries(kj PUBLIC pthread)
