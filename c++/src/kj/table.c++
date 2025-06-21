@@ -157,7 +157,7 @@ kj::Array<HashBucket> rehash(kj::ArrayPtr<const HashBucket> oldBuckets, size_t t
 
   KJ_REQUIRE(targetSize < (1 << 30), "hash table has reached maximum size");
 
-  size_t size = chooseHashTableSize(targetSize);
+  size_t size = chooseHashTableSize(unsafe_cast<uint>(targetSize));
 
   if (size < oldBuckets.size()) {
     size = oldBuckets.size();
@@ -172,7 +172,7 @@ kj::Array<HashBucket> rehash(kj::ArrayPtr<const HashBucket> oldBuckets, size_t t
   for (auto& oldBucket: oldBuckets) {
     if (oldBucket.isOccupied()) {
       ++entryCount;
-      for (uint i = oldBucket.hash % newBuckets.size();; i = probeHash(newBuckets, i)) {
+      for (size_t i = oldBucket.hash % newBuckets.size();; i = probeHash(newBuckets, i)) {
         auto& newBucket = newBuckets[i];
         if (newBucket.isEmpty()) {
           newBucket = oldBucket;
@@ -310,7 +310,7 @@ void BTreeImpl::reserve(size_t size) {
   // least half-full. (Note that it's correct for this calculation to round down, not up: The
   // remainder will necessarily be distributed among the non-full leaves, rather than creating a
   // new leaf, because if it went into a new leaf, that leaf would be less than half-full.)
-  uint leaves = size / (Leaf::NROWS / 2);
+  uint leaves = unsafe_cast<uint>(size / (Leaf::NROWS / 2));
 
   // Calculate the worst-case number of parents to cover the leaves, given that a parent is always
   // at least half-full. Since the parents form a tree with branching factor B, the size of the
@@ -326,7 +326,7 @@ void BTreeImpl::reserve(size_t size) {
       height + 2;    // minimum freelist size needed by insert()
 
   if (treeCapacity < newSize) {
-    growTree(newSize);
+    growTree(unsafe_cast<uint>(newSize));
   }
 }
 
@@ -895,7 +895,7 @@ void InsertionOrderIndex::reserve(size_t size) {
     // Note that `size` and `capacity` do not include the special link[0].
 
     // Round up to the next power of 2.
-    size_t allocation = 1u << (_::lg(size) + 1);
+    size_t allocation = 1u << (_::lg(unsafe_cast<uint>(size)) + 1);
     KJ_DASSERT(allocation > size);
     KJ_DASSERT(allocation <= size * 2);
 
@@ -910,7 +910,7 @@ void InsertionOrderIndex::reserve(size_t size) {
     _::acopy(newLinks, links, capacity + 1);
     if (links != &EMPTY_LINK) delete[] links;
     links = newLinks;
-    capacity = allocation - 1;
+    capacity = unsafe_cast<uint>(allocation - 1);
   }
 }
 
@@ -930,8 +930,8 @@ kj::Maybe<size_t> InsertionOrderIndex::insertImpl(size_t pos) {
 
   links[pos + 1].prev = links[0].prev;
   links[pos + 1].next = 0;
-  links[links[0].prev].next = pos + 1;
-  links[0].prev = pos + 1;
+  links[links[0].prev].next = unsafe_cast<uint>(pos + 1);
+  links[0].prev = unsafe_cast<uint>(pos + 1);
 
   return nullptr;
 }
@@ -954,8 +954,8 @@ void InsertionOrderIndex::moveImpl(size_t oldPos, size_t newPos) {
 
   KJ_DASSERT(links[link.next].prev == oldPos + 1);
   KJ_DASSERT(links[link.prev].next == oldPos + 1);
-  links[link.next].prev = newPos + 1;
-  links[link.prev].next = newPos + 1;
+  links[link.next].prev = unsafe_cast<uint>(newPos + 1);
+  links[link.prev].next = unsafe_cast<uint>(newPos + 1);
 
 #ifdef KJ_DEBUG
   memset(&link, 0xff, sizeof(Link));

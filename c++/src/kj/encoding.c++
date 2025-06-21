@@ -738,7 +738,7 @@ int base64_encode_block(const char* plaintext_in, int length_in,
       if (plainchar == plaintextend) {
         state_in->result = result;
         state_in->step = step_A;
-        return codechar - code_out;
+        return unsafe_cast<int>(codechar - code_out);
       }
       fragment = *plainchar++;
       result = (fragment & 0x0fc) >> 2;
@@ -749,7 +749,7 @@ int base64_encode_block(const char* plaintext_in, int length_in,
       if (plainchar == plaintextend) {
         state_in->result = result;
         state_in->step = step_B;
-        return codechar - code_out;
+        return unsafe_cast<int>(codechar - code_out);
       }
       fragment = *plainchar++;
       result |= (fragment & 0x0f0) >> 4;
@@ -760,7 +760,7 @@ int base64_encode_block(const char* plaintext_in, int length_in,
       if (plainchar == plaintextend) {
         state_in->result = result;
         state_in->step = step_C;
-        return codechar - code_out;
+        return unsafe_cast<int>(codechar - code_out);
       }
       fragment = *plainchar++;
       result |= (fragment & 0x0c0) >> 6;
@@ -801,7 +801,7 @@ int base64_encode_blockend(char* code_out, base64_encodestate* state_in, bool br
     *codechar++ = '\n';
   }
 
-  return codechar - code_out;
+  return unsafe_cast<int>(codechar - code_out);
 }
 
 }  // namespace
@@ -812,7 +812,7 @@ String encodeBase64(ArrayPtr<const byte> input, bool breakLines) {
   auto numChars = (input.size() + 2) / 3 * 4;
   if (breakLines) {
     // Add space for newline characters.
-    uint lineCount = numChars / CHARS_PER_LINE;
+    uint lineCount = unsafe_cast<uint>(numChars / CHARS_PER_LINE);
     if (numChars % CHARS_PER_LINE > 0) {
       // Partial line.
       ++lineCount;
@@ -832,7 +832,7 @@ String encodeBase64(ArrayPtr<const byte> input, bool breakLines) {
   /* initialise the encoder state */
   base64_init_encodestate(&s);
   /* gather data from the input and send it to the output */
-  cnt = base64_encode_block((const char *)input.begin(), input.size(), c, &s, breakLines);
+  cnt = base64_encode_block((const char *)input.begin(), unsafe_cast<int>(input.size()), c, &s, breakLines);
   c += cnt;
   total += cnt;
 
@@ -919,7 +919,7 @@ int base64_decode_block(const char* code_in, const int length_in,
         if (codechar == code_in+length_in) {
           state_in->step = step_a;
           state_in->plainchar = '\0';
-          return plainchar - plaintext_out;
+          return unsafe_cast<int>(plainchar - plaintext_out);
         }
         fragment = (signed char)base64_decode_value(*codechar++);
         // It is an error to see invalid or padding bytes in step A.
@@ -936,7 +936,7 @@ int base64_decode_block(const char* code_in, const int length_in,
           // TODO(someday): This actually breaks the streaming use case, if base64_decode_block() is
           //   to be called multiple times. We'll fix it if we ever care to support streaming.
           state_in->hadErrors = true;
-          return plainchar - plaintext_out;
+          return unsafe_cast<int>(plainchar - plaintext_out);
         }
         fragment = (signed char)base64_decode_value(*codechar++);
         // It is an error to see invalid or padding bytes in step B.
@@ -954,7 +954,7 @@ int base64_decode_block(const char* code_in, const int length_in,
           // TODO(someday): This actually breaks the streaming use case, if base64_decode_block() is
           //   to be called multiple times. We'll fix it if we ever care to support streaming.
           ERROR_IF(state_in->nPaddingBytesSeen == 1);
-          return plainchar - plaintext_out;
+          return unsafe_cast<int>(plainchar - plaintext_out);
         }
         fragment = (signed char)base64_decode_value(*codechar++);
         // It is an error to see invalid bytes or more than two padding bytes in step C.
@@ -970,7 +970,7 @@ int base64_decode_block(const char* code_in, const int length_in,
         if (codechar == code_in+length_in) {
           state_in->step = step_d;
           state_in->plainchar = *plainchar;
-          return plainchar - plaintext_out;
+          return unsafe_cast<int>(plainchar - plaintext_out);
         }
         fragment = (signed char)base64_decode_value(*codechar++);
         // It is an error to see invalid bytes or more than one padding byte in step D.
@@ -995,7 +995,7 @@ EncodingResult<Array<byte>> decodeBase64(ArrayPtr<const char> input) {
 
   auto output = heapArray<byte>((input.size() * 6 + 7) / 8);
 
-  size_t n = base64_decode_block(input.begin(), input.size(),
+  size_t n = base64_decode_block(input.begin(), unsafe_cast<int>(input.size()),
       reinterpret_cast<char*>(output.begin()), &state);
 
   if (n < output.size()) {

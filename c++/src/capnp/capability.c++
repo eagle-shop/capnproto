@@ -129,7 +129,7 @@ kj::Promise<void> Capability::Client::whenResolved() {
 
 static inline uint firstSegmentSize(kj::Maybe<MessageSize> sizeHint) {
   KJ_IF_MAYBE(s, sizeHint) {
-    return s->wordCount;
+    return kj::unsafe_cast<uint>(s->wordCount);
   } else {
     return SUGGESTED_FIRST_SEGMENT_WORDS;
   }
@@ -1129,7 +1129,7 @@ kj::Maybe<kj::Own<ClientHook>> BuilderCapabilityTable::extractCap(uint index) {
 }
 
 uint BuilderCapabilityTable::injectCap(kj::Own<ClientHook>&& cap) {
-  uint result = table.size();
+  uint result = kj::unsafe_cast<uint>(table.size());
   table.add(kj::mv(cap));
   return result;
 }

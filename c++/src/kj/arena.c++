@@ -91,7 +91,7 @@ inline size_t alignTo(size_t s, uint alignment) {
 
 void* Arena::allocateBytes(size_t amount, uint alignment, bool hasDisposer) {
   if (hasDisposer) {
-    alignment = kj::max(alignment, alignof(ObjectHeader));
+    alignment = unsafe_cast<uint>(kj::max(alignment, alignof(ObjectHeader)));
     amount += alignTo(sizeof(ObjectHeader), alignment);
   }
 
@@ -124,7 +124,7 @@ void* Arena::allocateBytesInternal(size_t amount, uint alignment) {
   // We need to allocate at least enough space for the ChunkHeader and the requested allocation.
 
   // If the alignment is less than that of the chunk header, we'll need to increase it.
-  alignment = kj::max(alignment, alignof(ChunkHeader));
+  alignment = unsafe_cast<uint>(kj::max(alignment, alignof(ChunkHeader)));
 
   // If the ChunkHeader size does not match the alignment, we'll need to pad it up.
   amount += alignTo(sizeof(ChunkHeader), alignment);

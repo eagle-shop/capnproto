@@ -216,7 +216,7 @@ MallocMessageBuilder::MallocMessageBuilder(
 
 MallocMessageBuilder::MallocMessageBuilder(
     kj::ArrayPtr<word> firstSegment, AllocationStrategy allocationStrategy)
-    : nextSize(firstSegment.size()), allocationStrategy(allocationStrategy),
+    : nextSize(kj::unsafe_cast<uint>(firstSegment.size())), allocationStrategy(allocationStrategy),
       ownFirstSegment(false), returnedFirstSegment(false), firstSegment(firstSegment.begin()) {
   KJ_REQUIRE(firstSegment.size() > 0, "First segment size must be non-zero.");
 

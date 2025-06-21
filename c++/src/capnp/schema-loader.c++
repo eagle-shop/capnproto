@@ -256,7 +256,7 @@ public:
   }
 
   const _::RawSchema** makeDependencyArray(uint32_t* count) {
-    *count = dependencies.size();
+    *count = kj::unsafe_cast<uint32_t>(dependencies.size());
     kj::ArrayPtr<const _::RawSchema*> result =
         loader.arena.allocateArray<const _::RawSchema*>(*count);
     uint pos = 0;
@@ -268,7 +268,7 @@ public:
   }
 
   const uint16_t* makeMemberInfoArray(uint32_t* count) {
-    *count = members.size();
+    *count = kj::unsafe_cast<uint32_t>(members.size());
     kj::ArrayPtr<uint16_t> result = loader.arena.allocateArray<uint16_t>(*count);
     uint pos = 0;
     for (auto& member: members) {
@@ -1281,7 +1281,7 @@ _::RawSchema* SchemaLoader::Impl::load(const schema::Node::Reader& reader, bool 
   if (shouldReplace) {
     // Initialize the RawSchema.
     schema->encodedNode = validated.begin();
-    schema->encodedSize = validated.size();
+    schema->encodedSize = kj::unsafe_cast<uint32_t>(validated.size());
     schema->dependencies = validator.makeDependencyArray(&schema->dependencyCount);
     schema->membersByName = validator.makeMemberInfoArray(&schema->memberCount);
     schema->membersByDiscriminant = validator.makeMembersByDiscriminantArray();
@@ -1290,7 +1290,7 @@ _::RawSchema* SchemaLoader::Impl::load(const schema::Node::Reader& reader, bool 
     // need to set up the "dependencies" map under defaultBrand.
     auto deps = makeBrandedDependencies(schema, kj::ArrayPtr<const _::RawBrandedSchema::Scope>());
     schema->defaultBrand.dependencies = deps.begin();
-    schema->defaultBrand.dependencyCount = deps.size();
+    schema->defaultBrand.dependencyCount = kj::unsafe_cast<uint32_t>(deps.size());
   }
 
   if (shouldClearInitializer) {
@@ -1370,7 +1370,7 @@ _::RawSchema* SchemaLoader::Impl::loadNative(const _::RawSchema* nativeSchema) {
     // Also need to re-do the branded dependencies.
     auto deps = makeBrandedDependencies(schema, kj::ArrayPtr<const _::RawBrandedSchema::Scope>());
     schema->defaultBrand.dependencies = deps.begin();
-    schema->defaultBrand.dependencyCount = deps.size();
+    schema->defaultBrand.dependencyCount = kj::unsafe_cast<uint32_t>(deps.size());
 
     // If there is a struct size requirement, we need to make sure that it is satisfied.
     KJ_IF_MAYBE(sizeReq, structSizeRequirements.find(nativeSchema->id)) {
@@ -1453,7 +1453,7 @@ const _::RawBrandedSchema* SchemaLoader::Impl::makeBranded(
         memset(dstBindings.begin(), 0, dstBindings.size() * sizeof(dstBindings[0]));
 
         for (auto j: kj::indices(srcBindings)) {
-          auto srcBinding = srcBindings[j];
+          auto srcBinding = srcBindings[kj::unsafe_cast<uint>(j)];
           auto& dstBinding = dstBindings[j];
 
           memset(&dstBinding, 0, sizeof(dstBinding));
@@ -1471,7 +1471,7 @@ const _::RawBrandedSchema* SchemaLoader::Impl::makeBranded(
 
         auto& dstScope = dstScopes[dstScopeCount++];
         dstScope.typeId = srcScope.getScopeId();
-        dstScope.bindingCount = dstBindings.size();
+        dstScope.bindingCount = kj::unsafe_cast<uint>(dstBindings.size());
         dstScope.bindings = copyDeduped(dstBindings).begin();
         break;
       }
@@ -1525,7 +1525,7 @@ const _::RawBrandedSchema* SchemaLoader::Impl::makeBranded(
 
     brand.generic = schema;
     brand.scopes = bindings.begin();
-    brand.scopeCount = bindings.size();
+    brand.scopeCount = kj::unsafe_cast<uint32_t>(bindings.size());
     brand.lazyInitializer = &brandedInitializer;
     return &brand;
   }
@@ -1565,10 +1565,11 @@ SchemaLoader::Impl::makeBrandedDependencies(
     case schema::Node::STRUCT: {
       auto fields = node.getStruct().getFields();
       for (auto i: kj::indices(fields)) {
-        auto field = fields[i];
+        const uint i2 = kj::unsafe_cast<uint>(i);
+        auto field = fields[i2];
         switch (field.which()) {
           case schema::Field::SLOT:
-            ADD_ENTRY(FIELD, i, makeDepSchema(
+            ADD_ENTRY(FIELD, i2, makeDepSchema(
                 field.getSlot().getType(), scopeName, bindings))
             break;
           case schema::Field::GROUP: {
@@ -1576,9 +1577,9 @@ SchemaLoader::Impl::makeBrandedDependencies(
                 field.getGroup().getTypeId(),
                 "(unknown group type)", schema::Node::STRUCT, true);
             KJ_IF_MAYBE(b, bindings) {
-              ADD_ENTRY(FIELD, i, makeBranded(group, *b));
+              ADD_ENTRY(FIELD, i2, makeBranded(group, *b));
             } else {
-              ADD_ENTRY(FIELD, i, getUnbound(group));
+              ADD_ENTRY(FIELD, i2, getUnbound(group));
             }
             break;
           }
@@ -1592,8 +1593,9 @@ SchemaLoader::Impl::makeBrandedDependencies(
       {
         auto superclasses = interface.getSuperclasses();
         for (auto i: kj::indices(superclasses)) {
-          auto superclass = superclasses[i];
-          ADD_ENTRY(SUPERCLASS, i, makeDepSchema(
+          const uint i2 = kj::unsafe_cast<uint>(i);
+          auto superclass = superclasses[i2];
+          ADD_ENTRY(SUPERCLASS, i2, makeDepSchema(
               superclass.getId(), schema::Type::INTERFACE, schema::Node::INTERFACE,
               superclass.getBrand(), scopeName, bindings))
         }
@@ -1601,11 +1603,12 @@ SchemaLoader::Impl::makeBrandedDependencies(
       {
         auto methods = interface.getMethods();
         for (auto i: kj::indices(methods)) {
-          auto method = methods[i];
-          ADD_ENTRY(METHOD_PARAMS, i, makeDepSchema(
+          const uint i2 = kj::unsafe_cast<uint>(i);
+          auto method = methods[i2];
+          ADD_ENTRY(METHOD_PARAMS, i2, makeDepSchema(
               method.getParamStructType(), schema::Type::STRUCT, schema::Node::STRUCT,
               method.getParamBrand(), scopeName, bindings))
-          ADD_ENTRY(METHOD_RESULTS, i, makeDepSchema(
+          ADD_ENTRY(METHOD_RESULTS, i2, makeDepSchema(
               method.getResultStructType(), schema::Type::STRUCT, schema::Node::STRUCT,
               method.getResultBrand(), scopeName, bindings))
         }
@@ -1807,7 +1810,7 @@ const _::RawBrandedSchema* SchemaLoader::Impl::getUnbound(const _::RawSchema* sc
     slot->generic = schema;
     auto deps = makeBrandedDependencies(schema, nullptr);
     slot->dependencies = deps.begin();
-    slot->dependencyCount = deps.size();
+    slot->dependencyCount = kj::unsafe_cast<uint32_t>(deps.size());
     unboundBrands.insert(schema, slot);
     return slot;
   }
@@ -2060,7 +2063,7 @@ void SchemaLoader::Impl::applyStructSizeRequirement(
     // We don't need to re-validate the node because we know this change could not possibly have
     // invalidated it.  Just remake the unchecked message.
     raw->encodedNode = words.begin();
-    raw->encodedSize = words.size();
+    raw->encodedSize = kj::unsafe_cast<uint32_t>(words.size());
   }
 }
 
@@ -2117,7 +2120,7 @@ void SchemaLoader::BrandedInitializerImpl::init(const _::RawBrandedSchema* schem
   auto deps = lock->get()->makeBrandedDependencies(mutableSchema->generic,
       kj::arrayPtr(mutableSchema->scopes, mutableSchema->scopeCount));
   mutableSchema->dependencies = deps.begin();
-  mutableSchema->dependencyCount = deps.size();
+  mutableSchema->dependencyCount = kj::unsafe_cast<uint32_t>(deps.size());
 
   // It's initialized now, so disable the initializer.
 #if __GNUC__ || defined(__clang__)

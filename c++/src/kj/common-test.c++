@@ -925,5 +925,30 @@ KJ_TEST("kj::ArrayPtr startsWith / endsWith / findFirst / findLast") {
   KJ_EXPECT(arr.findLast(78).orDefault(100) == 100);
 }
 
+#define EXPECT_THROW(e, code) { \
+  bool threw = false; \
+  try { \
+   code; \
+  } catch (const e&) { \
+    threw = true; \
+  } catch (...) {} \
+  KJ_EXPECT(threw); \
+}
+
+KJ_TEST("kj::unsafe_cast") {
+  constexpr int16_t int16_t_max = std::numeric_limits<int16_t>::max();
+  constexpr int16_t int16_t_min = std::numeric_limits<int16_t>::min();
+  constexpr uint16_t uint16_t_max = std::numeric_limits<uint16_t>::max();
+  constexpr int32_t int32_t_min = std::numeric_limits<int32_t>::min();
+
+  KJ_EXPECT(unsafe_cast<int16_t>(static_cast<uint16_t>(int16_t_max)) == int16_t_max);
+  KJ_EXPECT(unsafe_cast<int16_t>(static_cast<int32_t>(int16_t_max)) == int16_t_max);
+  KJ_EXPECT(unsafe_cast<int32_t>(int16_t_max) == int16_t_max);
+
+  EXPECT_THROW(std::overflow_error, unsafe_cast<int16_t>(uint16_t_max));
+  EXPECT_THROW(std::underflow_error, unsafe_cast<uint16_t>(int16_t_min));
+  EXPECT_THROW(std::underflow_error, unsafe_cast<int16_t>(int32_t_min));
+}
+
 }  // namespace
 }  // namespace kj

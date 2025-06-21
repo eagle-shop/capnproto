@@ -60,7 +60,7 @@ uint copySizeHint(MessageSize size) {
   uint64_t sizeHint = size.wordCount + size.capCount * CAP_DESCRIPTOR_SIZE_HINT
                     // if capCount > 0, the cap descriptor list has a 1-word tag
                     + (size.capCount > 0);
-  return kj::min(MAX_SIZE_HINT, sizeHint);
+  return kj::unsafe_cast<uint>(kj::min(MAX_SIZE_HINT, sizeHint));
 }
 
 uint firstSegmentSize(kj::Maybe<MessageSize> sizeHint, uint additional) {
@@ -95,10 +95,10 @@ kj::Maybe<kj::Array<PipelineOp>> toPipelineOps(List<rpc::PromisedAnswer::Op>::Re
 
 Orphan<List<rpc::PromisedAnswer::Op>> fromPipelineOps(
     Orphanage orphanage, kj::ArrayPtr<const PipelineOp> ops) {
-  auto result = orphanage.newOrphan<List<rpc::PromisedAnswer::Op>>(ops.size());
+  auto result = orphanage.newOrphan<List<rpc::PromisedAnswer::Op>>(kj::unsafe_cast<uint>(ops.size()));
   auto builder = result.get();
-  for (uint i: kj::indices(ops)) {
-    rpc::PromisedAnswer::Op::Builder opBuilder = builder[i];
+  for (auto i: kj::indices(ops)) {
+    rpc::PromisedAnswer::Op::Builder opBuilder = builder[kj::unsafe_cast<uint>(i)];
     switch (ops[i].type) {
       case PipelineOp::NOOP:
         opBuilder.setNoop();
@@ -162,7 +162,7 @@ void fromException(const kj::Exception& exception, rpc::Exception::Builder build
 }
 
 uint exceptionSizeHint(const kj::Exception& exception) {
-  return sizeInWords<rpc::Exception>() + exception.getDescription().size() / sizeof(word) + 1;
+  return kj::unsafe_cast<uint>(sizeInWords<rpc::Exception>() + exception.getDescription().size() / sizeof(word) + 1);
 }
 
 ClientHook::CallHints callHintsFromReader(rpc::Call::Reader reader) {
@@ -219,7 +219,7 @@ public:
 
   T& next(Id& id) {
     if (freeIds.empty()) {
-      id = slots.size();
+      id = kj::unsafe_cast<Id>(slots.size());
       KJ_ASSERT(!isHigh(id), "2^31 concurrent questions?!!?!");
       return slots.add();
     } else {
@@ -317,8 +317,9 @@ public:
 
   template <typename Func>
   void forEach(Func&& func) {
-    for (Id i: kj::indices(low)) {
-      func(i, low[i]);
+    for (auto i: kj::indices(low)) {
+      const Id i2 = kj::unsafe_cast<Id>(i);
+      func(i2, low[i2]);
     }
     for (auto& entry: high) {
       func(entry.first, entry.second);
@@ -371,7 +372,7 @@ public:
 
     {
       auto message = connection.get<Connected>()->newOutgoingMessage(
-          objectId.targetSize().wordCount + messageSizeHint<rpc::Bootstrap>());
+          kj::unsafe_cast<uint>(objectId.targetSize().wordCount + messageSizeHint<rpc::Bootstrap>()));
 
       auto builder = message->getBody().initAs<rpc::Message>().initBootstrap();
       builder.setQuestionId(questionId);
@@ -1308,15 +1309,15 @@ private:
       return nullptr;
     }
 
-    auto capTableBuilder = payload.initCapTable(capTable.size());
+    auto capTableBuilder = payload.initCapTable(kj::unsafe_cast<unsigned int>(capTable.size()));
     kj::Vector<ExportId> exports(capTable.size());
-    for (uint i: kj::indices(capTable)) {
+    for (auto i: kj::indices(capTable)) {
       KJ_IF_MAYBE(cap, capTable[i]) {
-        KJ_IF_MAYBE(exportId, writeDescriptor(**cap, capTableBuilder[i], fds)) {
+        KJ_IF_MAYBE(exportId, writeDescriptor(**cap, capTableBuilder[kj::unsafe_cast<uint>(i)], fds)) {
           exports.add(*exportId);
         }
       } else {
-        capTableBuilder[i].setNone();
+        capTableBuilder[kj::unsafe_cast<uint>(i)].setNone();
       }
     }
     return exports.releaseAsArray();
@@ -2290,8 +2291,8 @@ private:
       : public RpcResponse, public RpcServerResponse, public kj::Refcounted{
   public:
     LocallyRedirectedRpcResponse(kj::Maybe<MessageSize> sizeHint)
-        : message(sizeHint.map([](MessageSize size) { return size.wordCount; })
-                          .orDefault(SUGGESTED_FIRST_SEGMENT_WORDS)) {}
+        : message(kj::unsafe_cast<uint>(sizeHint.map([](MessageSize size) { return size.wordCount; })
+                          .orDefault(SUGGESTED_FIRST_SEGMENT_WORDS))) {}
 
     AnyPointer::Builder getResultsBuilder() override {
       return message.getRoot<AnyPointer>();

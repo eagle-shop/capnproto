@@ -237,7 +237,7 @@ ArrayPtr<void* const> getStackTrace(ArrayPtr<void*> space, uint ignoreCount) {
   RtlCaptureContext(&context);
   return getStackTrace(space, ignoreCount, GetCurrentThread(), context);
 #elif KJ_HAS_BACKTRACE
-  size_t size = backtrace(space.begin(), space.size());
+  size_t size = backtrace(space.begin(), unsafe_cast<int>(space.size()));
   for (auto& addr: space.slice(0, size)) {
     // The addresses produced by backtrace() are return addresses, which means they point to the
     // instruction immediately after the call. Invoking addr2line on these can be confusing because
@@ -883,7 +883,7 @@ void Exception::truncateCommonTrace() {
 
     // We expect that the deepest frame in the exception's stack trace should be somewhere in our
     // own trace, since our own trace has a deeper limit. Search for it.
-    for (uint i = refTrace.size(); i > 0; i--) {
+    for (uint i = unsafe_cast<uint>(refTrace.size()); i > 0; i--) {
       if (refTrace[i-1] == trace[traceCount-1]) {
         // See how many frames match.
         for (uint j = 0; j < i; j++) {
@@ -1352,7 +1352,7 @@ kj::ArrayPtr<void* const> computeRelativeTrace(
     kj::ArrayPtr<void* const> subrt = relativeTo
         .slice(0, relativeTo.size() - kj::max<ssize_t>(0, i));
 
-    uint matchLen = sharedSuffixLength(subtrace, subrt);
+    uint matchLen = unsafe_cast<uint>(sharedSuffixLength(subtrace, subrt));
     if (matchLen > bestMatchLen) {
       bestMatchLen = matchLen;
       bestMatch = subtrace.slice(0, subtrace.size() - matchLen + 1);

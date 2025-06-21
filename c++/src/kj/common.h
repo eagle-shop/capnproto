@@ -108,6 +108,9 @@ KJ_BEGIN_HEADER
 #include <cstring>
 #include <initializer_list>
 #include <string.h>
+#include <limits>
+#include <stdexcept>
+#include <string>
 
 #if __linux__ && KJ_CPP_STD > 201200L
 // Hack around stdlib bug with C++14 that exists on some Linux systems.
@@ -2042,6 +2045,28 @@ _::Deferred<Func> defer(Func&& func) {
 
 #define KJ_DEFER(code) auto KJ_UNIQUE_NAME(_kjDefer) = ::kj::defer([&](){code;})
 // Run the given code when the function exits, whether by return or exception.
+
+template <typename To, typename From>
+To unsafe_cast(From from) {
+  if constexpr (std::is_signed<From>::value && std::is_unsigned<To>::value) {
+    if (from < 0) {
+      throw std::underflow_error("size is too small. size: " + std::to_string(from) + ", min(From): " + std::to_string(std::numeric_limits<From>::min()) + ", min(To): " + std::to_string(std::numeric_limits<To>::min()));
+    }
+  }
+  if constexpr (std::numeric_limits<From>::max() > std::numeric_limits<To>::max()) {
+    if (from > std::numeric_limits<To>::max()) {
+      throw std::overflow_error("size is too large. size: " + std::to_string(from) + ", max(From): " + std::to_string(std::numeric_limits<From>::max()) + ", max(To): " + std::to_string(std::numeric_limits<To>::max()));
+    }
+  }
+  if constexpr (!(std::is_unsigned<From>::value && std::is_signed<To>::value)) {
+    if constexpr (std::numeric_limits<From>::min() < std::numeric_limits<To>::min()) {
+      if (from < std::numeric_limits<To>::min()) {
+        throw std::underflow_error("size is too small. size: " + std::to_string(from) + ", min(From): " + std::to_string(std::numeric_limits<From>::min()) + ", min(To): " + std::to_string(std::numeric_limits<To>::min()));
+      }
+    }
+  }
+  return static_cast<To>(from);
+}
 
 }  // namespace kj
 

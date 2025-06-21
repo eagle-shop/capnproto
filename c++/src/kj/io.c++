@@ -447,7 +447,7 @@ void FdOutputStream::write(ArrayPtr<const ArrayPtr<const byte>> pieces) {
 
     // Issue the write.
     ssize_t n = 0;
-    KJ_SYSCALL(n = ::writev(fd, current, iovCount), fd);
+    KJ_SYSCALL(n = ::writev(fd, current, unsafe_cast<int>(iovCount)), fd);
     KJ_ASSERT(n > 0, "writev() returned zero.");
 
 #if __APPLE__

@@ -93,7 +93,7 @@ size_t expectedSizeInWordsFromPrefix(kj::ArrayPtr<const word> array) {
 
   // If the array is too small to contain the full segment table, truncate segmentCount to just
   // what is available.
-  segmentCount = kj::min(segmentCount, array.size() * 2 - 1u);
+  segmentCount = kj::unsafe_cast<uint>(kj::min(segmentCount, array.size() * 2 - 1u));
 
   size_t totalSize = offset;
   for (uint i = 0; i < segmentCount; i++) {
@@ -128,10 +128,10 @@ kj::Array<word> messageToFlatArray(kj::ArrayPtr<const kj::ArrayPtr<const word>> 
   // We write the segment count - 1 because this makes the first word zero for single-segment
   // messages, improving compression.  We don't bother doing this with segment sizes because
   // one-word segments are rare anyway.
-  table[0].set(segments.size() - 1);
+  table[0].set(kj::unsafe_cast<unsigned int>(segments.size() - 1));
 
   for (uint i = 0; i < segments.size(); i++) {
-    table[i + 1].set(segments[i].size());
+    table[i + 1].set(kj::unsafe_cast<unsigned int>(segments[i].size()));
   }
 
   if (segments.size() % 2 == 0) {
@@ -200,7 +200,7 @@ InputStreamMessageReader::InputStreamMessageReader(
              "Message is too large.  To increase the limit on the receiving end, see "
              "capnp::ReaderOptions.") {
     segmentCount = 1;
-    segment0Size = kj::min(segment0Size, options.traversalLimitInWords);
+    segment0Size = kj::unsafe_cast<uint>(kj::min(segment0Size, options.traversalLimitInWords));
     totalWords = segment0Size;
     break;
   }
@@ -281,9 +281,9 @@ void writeMessage(kj::OutputStream& output, kj::ArrayPtr<const kj::ArrayPtr<cons
   // We write the segment count - 1 because this makes the first word zero for single-segment
   // messages, improving compression.  We don't bother doing this with segment sizes because
   // one-word segments are rare anyway.
-  table[0].set(segments.size() - 1);
+  table[0].set(kj::unsafe_cast<unsigned int>(segments.size() - 1));
   for (uint i = 0; i < segments.size(); i++) {
-    table[i + 1].set(segments[i].size());
+    table[i + 1].set(kj::unsafe_cast<unsigned int>(segments[i].size()));
   }
   if (segments.size() % 2 == 0) {
     // Set padding byte.

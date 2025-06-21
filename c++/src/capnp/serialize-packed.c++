@@ -406,7 +406,7 @@ void PackedOutputStream::write(const void* src, size_t size) {
       }
 
       // Write the count.
-      uint count = in - runStart;
+      uint count = kj::unsafe_cast<uint>(in - runStart);
       *out++ = count / sizeof(word);
 
       if (count <= reinterpret_cast<uint8_t*>(buffer.end()) - out) {

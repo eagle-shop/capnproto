@@ -628,7 +628,7 @@ private:
       auto cmsgBytes = cmsgSpace.asBytes();
       memset(cmsgBytes.begin(), 0, cmsgBytes.size());
       msg.msg_control = cmsgBytes.begin();
-      msg.msg_controllen = msgBytes;
+      msg.msg_controllen = unsafe_cast<socklen_t>(msgBytes);
 
 #ifdef MSG_CMSG_CLOEXEC
       static constexpr int RECVMSG_FLAGS = MSG_CMSG_CLOEXEC;
@@ -775,7 +775,7 @@ private:
 
     ssize_t n;
     if (fds.size() == 0) {
-      KJ_NONBLOCKING_SYSCALL(n = ::writev(fd, iov.begin(), iov.size()), iovTotal, iov.size()) {
+      KJ_NONBLOCKING_SYSCALL(n = ::writev(fd, iov.begin(), unsafe_cast<int>(iov.size())), iovTotal, iov.size()) {
         // Error.
 
         // We can't "return kj::READY_NOW;" inside this block because it causes a memory leak due to
@@ -788,7 +788,7 @@ private:
       struct msghdr msg;
       memset(&msg, 0, sizeof(msg));
       msg.msg_iov = iov.begin();
-      msg.msg_iovlen = iov.size();
+      msg.msg_iovlen = unsafe_cast<int>(iov.size());
 
       // Allocate space to send a cmsg.
       size_t msgBytes = CMSG_SPACE(sizeof(int) * fds.size());
@@ -804,12 +804,12 @@ private:
       auto cmsgBytes = cmsgSpace.asBytes();
       memset(cmsgBytes.begin(), 0, cmsgBytes.size());
       msg.msg_control = cmsgBytes.begin();
-      msg.msg_controllen = msgBytes;
+      msg.msg_controllen = unsafe_cast<socklen_t>(msgBytes);
 
       struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
       cmsg->cmsg_level = SOL_SOCKET;
       cmsg->cmsg_type = SCM_RIGHTS;
-      cmsg->cmsg_len = CMSG_LEN(sizeof(int) * fds.size());
+      cmsg->cmsg_len = unsafe_cast<socklen_t>(CMSG_LEN(sizeof(int) * fds.size()));
       memcpy(CMSG_DATA(cmsg), fds.begin(), fds.asBytes().size());
 
       KJ_NONBLOCKING_SYSCALL(n = ::sendmsg(fd, &msg, 0)) {
@@ -1010,7 +1010,7 @@ public:
                  " 'unix-abstract:' for the abstract namespace.");
       result.addr.unixDomain.sun_family = AF_UNIX;
       strcpy(result.addr.unixDomain.sun_path, path.cStr());
-      result.addrlen = offsetof(struct sockaddr_un, sun_path) + path.size() + 1;
+      result.addrlen = unsafe_cast<socklen_t>(offsetof(struct sockaddr_un, sun_path) + path.size() + 1);
 
       if (!result.parseAllowedBy(filter)) {
         KJ_FAIL_REQUIRE("unix sockets blocked by restrictPeers()");
@@ -1031,7 +1031,7 @@ public:
       // although not strictly required by Linux, also copy the trailing
       // NULL terminator so that we can safely read it back in toString
       memcpy(result.addr.unixDomain.sun_path + 1, path.cStr(), path.size() + 1);
-      result.addrlen = offsetof(struct sockaddr_un, sun_path) + path.size() + 1;
+      result.addrlen = unsafe_cast<socklen_t>(offsetof(struct sockaddr_un, sun_path) + path.size() + 1);
 
       if (!result.parseAllowedBy(filter)) {
         KJ_FAIL_REQUIRE("abstract unix sockets blocked by restrictPeers()");
@@ -1159,7 +1159,7 @@ public:
       }
     }
 
-    return lookupHost(lowLevel, kj::heapString(addrPart), nullptr, port, filter);
+    return lookupHost(lowLevel, kj::heapString(addrPart), nullptr, unsafe_cast<uint>(port), filter);
   }
 
   static SocketAddress getLocalAddress(int sockfd) {
@@ -1829,7 +1829,7 @@ Promise<size_t> DatagramPortImpl::send(
   }
 
   msg.msg_iov = iov.begin();
-  msg.msg_iovlen = iov.size();
+  msg.msg_iovlen = unsafe_cast<int>(iov.size());
 
   ssize_t n;
   KJ_NONBLOCKING_SYSCALL(n = sendmsg(fd, &msg, 0));
@@ -1868,7 +1868,7 @@ public:
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
     msg.msg_control = ancillaryBuffer.begin();
-    msg.msg_controllen = ancillaryBuffer.size();
+    msg.msg_controllen = unsafe_cast<socklen_t>(ancillaryBuffer.size());
 
     ssize_t n;
     KJ_NONBLOCKING_SYSCALL(n = recvmsg(port.fd, &msg, 0));

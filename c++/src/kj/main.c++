@@ -531,7 +531,7 @@ void MainBuilder::MainImpl::operator()(StringPtr programName, ArrayPtr<const Str
             return;
           } else if (params[i + 1] == "help") {
             uint count = 0;
-            for (uint j = i + 2;
+            for (uint j = unsafe_cast<uint>(i + 2);
                  j < params.size() && (params[j] == "help" || params[j] == "--help");
                  j++) {
               ++count;
@@ -777,7 +777,7 @@ void MainBuilder::MainImpl::printHelp(StringPtr programName) {
 }
 
 void MainBuilder::MainImpl::wrapText(Vector<char>& output, StringPtr indent, StringPtr text) {
-  uint width = 80 - indent.size();
+  uint width = unsafe_cast<uint>(80 - indent.size());
 
   while (text.size() > 0) {
     output.addAll(indent);

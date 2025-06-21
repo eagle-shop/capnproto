@@ -66,9 +66,9 @@ void SegmentBuilder::throwNotWritable() {
 
 static SegmentWordCount verifySegmentSize(size_t size) {
   auto gsize = bounded(size) * WORDS;
-  return assertMaxBits<SEGMENT_WORD_COUNT_BITS>(gsize, [&]() {
+  return kj::unsafe_cast<SegmentWordCount>(assertMaxBits<SEGMENT_WORD_COUNT_BITS>(gsize, [&]() {
     KJ_FAIL_REQUIRE("segment is too large", size);
-  });
+  }));
 }
 
 static SegmentWordCount verifySegment(kj::ArrayPtr<const word> segment) {
@@ -371,7 +371,7 @@ uint BuilderArena::LocalCapTable::injectCap(kj::Own<ClientHook>&& cap) {
 #if CAPNP_LITE
   KJ_UNIMPLEMENTED("no cap tables in lite mode");
 #else
-  uint result = capTable.size();
+  uint result = kj::unsafe_cast<uint>(capTable.size());
   capTable.add(kj::mv(cap));
   return result;
 #endif

@@ -350,7 +350,7 @@ uint32_t Schema::getSchemaOffset(const schema::Value::Reader& value) const {
                      "and any-pointer fields.");
   }
 
-  return ptr - raw->generic->encodedNode;
+  return kj::unsafe_cast<uint32_t>(ptr - raw->generic->encodedNode);
 }
 
 Type Schema::getBrandBinding(uint64_t scopeId, uint index) const {
@@ -599,9 +599,9 @@ kj::Maybe<InterfaceSchema::Method> InterfaceSchema::findMethodByName(
     //   requires updating subclasses whenever a new superclass is loaded.
     auto superclasses = getProto().getInterface().getSuperclasses();
     for (auto i: kj::indices(superclasses)) {
-      auto superclass = superclasses[i];
+      auto superclass = superclasses[kj::unsafe_cast<uint>(i)];
       uint location = _::RawBrandedSchema::makeDepLocation(
-          _::RawBrandedSchema::DepKind::SUPERCLASS, i);
+          _::RawBrandedSchema::DepKind::SUPERCLASS, kj::unsafe_cast<uint>(i));
       result = getDependency(superclass.getId(), location)
           .asInterface().findMethodByName(name, counter);
       if (result != nullptr) {
@@ -647,9 +647,9 @@ bool InterfaceSchema::extends(InterfaceSchema other, uint& counter) const {
   // TODO(perf):  This may be somewhat slow.  See findMethodByName() for discussion.
   auto superclasses = getProto().getInterface().getSuperclasses();
   for (auto i: kj::indices(superclasses)) {
-    auto superclass = superclasses[i];
+    auto superclass = superclasses[kj::unsafe_cast<uint>(i)];
     uint location = _::RawBrandedSchema::makeDepLocation(
-        _::RawBrandedSchema::DepKind::SUPERCLASS, i);
+        _::RawBrandedSchema::DepKind::SUPERCLASS, kj::unsafe_cast<uint>(i));
     if (getDependency(superclass.getId(), location).asInterface().extends(other, counter)) {
       return true;
     }
@@ -680,9 +680,9 @@ kj::Maybe<InterfaceSchema> InterfaceSchema::findSuperclass(uint64_t typeId, uint
   // TODO(perf):  This may be somewhat slow.  See findMethodByName() for discussion.
   auto superclasses = getProto().getInterface().getSuperclasses();
   for (auto i: kj::indices(superclasses)) {
-    auto superclass = superclasses[i];
+    auto superclass = superclasses[kj::unsafe_cast<uint>(i)];
     uint location = _::RawBrandedSchema::makeDepLocation(
-        _::RawBrandedSchema::DepKind::SUPERCLASS, i);
+        _::RawBrandedSchema::DepKind::SUPERCLASS, kj::unsafe_cast<uint>(i));
     KJ_IF_MAYBE(result, getDependency(superclass.getId(), location).asInterface()
                             .findSuperclass(typeId, counter)) {
       return *result;

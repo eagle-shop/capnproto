@@ -220,14 +220,14 @@ DynamicValue::Reader DynamicStruct::Reader::get(StructSchema::Field field) const
           Text::Reader typedDval = dval.isAnyPointer() ? Text::Reader() : dval.getText();
           return reader.getPointerField(assumePointerOffset(slot.getOffset()))
                        .getBlob<Text>(typedDval.begin(),
-                           assumeMax<MAX_TEXT_SIZE>(typedDval.size()) * BYTES);
+                           assumeMax<MAX_TEXT_SIZE>(kj::unsafe_cast<ByteCount>(typedDval.size() * BYTES)));
         }
 
         case schema::Type::DATA: {
           Data::Reader typedDval = dval.isAnyPointer() ? Data::Reader() : dval.getData();
           return reader.getPointerField(assumePointerOffset(slot.getOffset()))
                        .getBlob<Data>(typedDval.begin(),
-                           assumeBits<BLOB_SIZE_BITS>(typedDval.size()) * BYTES);
+                           assumeBits<BLOB_SIZE_BITS>(kj::unsafe_cast<ByteCount>(typedDval.size() * BYTES)));
         }
 
         case schema::Type::LIST: {
@@ -312,14 +312,14 @@ DynamicValue::Builder DynamicStruct::Builder::get(StructSchema::Field field) {
           Text::Reader typedDval = dval.isAnyPointer() ? Text::Reader() : dval.getText();
           return builder.getPointerField(assumePointerOffset(slot.getOffset()))
                         .getBlob<Text>(typedDval.begin(),
-                            assumeMax<MAX_TEXT_SIZE>(typedDval.size()) * BYTES);
+                            assumeMax<MAX_TEXT_SIZE>(kj::unsafe_cast<ByteCount>(typedDval.size() * BYTES)));
         }
 
         case schema::Type::DATA: {
           Data::Reader typedDval = dval.isAnyPointer() ? Data::Reader() : dval.getData();
           return builder.getPointerField(assumePointerOffset(slot.getOffset()))
                         .getBlob<Data>(typedDval.begin(),
-                            assumeBits<BLOB_SIZE_BITS>(typedDval.size()) * BYTES);
+                            assumeBits<BLOB_SIZE_BITS>(kj::unsafe_cast<ByteCount>(typedDval.size() * BYTES)));
         }
 
         case schema::Type::LIST: {
@@ -1014,7 +1014,7 @@ void DynamicStruct::Builder::set(kj::StringPtr name, const DynamicValue::Reader&
 }
 void DynamicStruct::Builder::set(kj::StringPtr name,
                                  std::initializer_list<DynamicValue::Reader> value) {
-  auto list = init(name, value.size()).as<DynamicList>();
+  auto list = init(name, kj::unsafe_cast<uint>(value.size())).as<DynamicList>();
   uint i = 0;
   for (auto element: value) {
     list.set(i++, element);
@@ -1702,7 +1702,7 @@ T signedToUnsigned(long long value) {
     // Use it anyway.
     break;
   }
-  return value;
+  return kj::unsafe_cast<T>(value);
 }
 
 template <>
@@ -1721,7 +1721,7 @@ T unsignedToSigned(unsigned long long value) {
     // Use it anyway.
     break;
   }
-  return value;
+  return kj::unsafe_cast<T>(value);
 }
 
 template <>
@@ -1735,7 +1735,7 @@ int64_t unsignedToSigned<int64_t>(unsigned long long value) {
 
 template <typename T, typename U>
 T checkRoundTrip(U value) {
-  T result = value;
+  T result = kj::unsafe_cast<T>(value);
   KJ_REQUIRE(U(result) == value, "Value out-of-range for requested type.", value) {
     // Use it anyway.
     break;

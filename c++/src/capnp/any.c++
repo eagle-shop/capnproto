@@ -101,13 +101,13 @@ Equality AnyStruct::Reader::equals(AnyStruct::Reader right) const {
   }
 
   auto ptrsL = getPointerSection();
-  size_t ptrsSizeL = ptrsL.size();
+  uint ptrsSizeL = kj::unsafe_cast<uint>(ptrsL.size());
   while (ptrsSizeL > 0 && ptrsL[ptrsSizeL - 1].isNull()) {
     -- ptrsSizeL;
   }
 
   auto ptrsR = right.getPointerSection();
-  size_t ptrsSizeR = ptrsR.size();
+  uint ptrsSizeR = kj::unsafe_cast<uint>(ptrsR.size());
   while (ptrsSizeR > 0 && ptrsR[ptrsSizeR - 1].isNull()) {
     -- ptrsSizeR;
   }
@@ -116,7 +116,7 @@ Equality AnyStruct::Reader::equals(AnyStruct::Reader right) const {
     return Equality::NOT_EQUAL;
   }
 
-  size_t i = 0;
+  uint i = 0;
 
   auto eqResult = Equality::EQUAL;
   for (; i < ptrsSizeL; i++) {
@@ -190,7 +190,7 @@ Equality AnyList::Reader::equals(AnyList::Reader right) const {
     case ElementSize::INLINE_COMPOSITE: {
       auto llist = as<List<AnyStruct>>();
       auto rlist = right.as<List<AnyStruct>>();
-      for(size_t i = 0; i < size(); i++) {
+      for(uint i = 0; i < size(); i++) {
         switch(llist[i].equals(rlist[i])) {
           case Equality::EQUAL:
             break;

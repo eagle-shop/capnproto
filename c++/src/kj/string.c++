@@ -559,7 +559,7 @@ double NoLocaleStrtod(const char* text, char** original_endptr) {
     // Update original_endptr to point at the right location.
     if (original_endptr != NULL) {
       // size_diff is non-zero if the localized radix has multiple bytes.
-      int size_diff = localized.size() - strlen(text);
+      int size_diff = unsafe_cast<int>(localized.size() - strlen(text));
       // const_cast is necessary to match the strtod() interface.
       *original_endptr = const_cast<char*>(
         text + (localized_endptr - localized_cstr - size_diff));

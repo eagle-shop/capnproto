@@ -2734,10 +2734,10 @@ void ExclusiveJoinPromiseNode::Branch::traceEvent(TraceBuilder& builder) {
 ArrayJoinPromiseNodeBase::ArrayJoinPromiseNodeBase(
     Array<OwnPromiseNode> promises, ExceptionOrValue* resultParts, size_t partSize,
     SourceLocation location, ArrayJoinBehavior joinBehavior)
-    : joinBehavior(joinBehavior), countLeft(promises.size()) {
+    : joinBehavior(joinBehavior), countLeft(unsafe_cast<uint>(promises.size())) {
   // Make the branches.
   auto builder = heapArrayBuilder<Branch>(promises.size());
-  for (uint i: indices(promises)) {
+  for (size_t i: indices(promises)) {
     ExceptionOrValue& output = *reinterpret_cast<ExceptionOrValue*>(
         reinterpret_cast<byte*>(resultParts) + i * partSize);
     builder.add(*this, kj::mv(promises[i]), output, location);

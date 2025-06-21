@@ -267,9 +267,9 @@ void fillWriteArraysWithMessage(kj::ArrayPtr<const kj::ArrayPtr<const word>> seg
   // We write the segment count - 1 because this makes the first word zero for single-segment
   // messages, improving compression.  We don't bother doing this with segment sizes because
   // one-word segments are rare anyway.
-  table[0].set(segments.size() - 1);
+  table[0].set(kj::unsafe_cast<unsigned int>(segments.size() - 1));
   for (uint i = 0; i < segments.size(); i++) {
-    table[i + 1].set(segments[i].size());
+    table[i + 1].set(kj::unsafe_cast<unsigned int>(segments[i].size()));
   }
   if (segments.size() % 2 == 0) {
     // Set padding byte.
